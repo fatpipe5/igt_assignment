@@ -53,6 +53,29 @@ defmodule ClothingDashboardWeb.DashboardLive do
           <p class="text-xl"><%= @total_transactions %></p>
         </div>
       </div>
+
+      <!-- Transactions Table -->
+      <div class="mt-6">
+        <h2 class="text-lg font-bold mb-4">Transactions</h2>
+        <table class="min-w-full border-collapse border border-gray-300 shadow">
+          <thead>
+            <tr class="bg-gray-100">
+              <th class="border px-4 py-2">Product</th>
+              <th class="border px-4 py-2">Quantity</th>
+              <th class="border px-4 py-2">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <%= for transaction <- @transactions do %>
+              <tr class="hover:bg-gray-50">
+                <td class="border px-4 py-2"><%= transaction.product %></td>
+                <td class="border px-4 py-2"><%= transaction.quantity %></td>
+                <td class="border px-4 py-2"><%= transaction.date %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
     </div>
     """
   end
@@ -66,7 +89,6 @@ defmodule ClothingDashboardWeb.DashboardLive do
 
   @impl true
   def handle_event("filter_month", %{"month" => month}, socket) do
-    IO.inspect(month, label: "Selected Month") # Debug log
     stats =
       if month == "" do
         fetch_statistics(nil)
@@ -78,7 +100,6 @@ defmodule ClothingDashboardWeb.DashboardLive do
   end
 
   defp fetch_statistics(month \\ nil) do
-
     # Total products in stock
     total_products_in_stock = Repo.aggregate(Catalog.Product, :sum, :stock) || 0
 
@@ -101,8 +122,6 @@ defmodule ClothingDashboardWeb.DashboardLive do
           limit: 1
       end
 
-    IO.inspect(Repo.all(best_selling_product_query), label: "Best Selling Product Query Result")
-
     best_selling_product = Repo.one(best_selling_product_query)
 
     # Total transactions query
@@ -114,20 +133,24 @@ defmodule ClothingDashboardWeb.DashboardLive do
         from t in Catalog.Transaction
       end
 
-
     total_transactions = Repo.aggregate(transactions_query, :count, :id) || 0
+
+    # Fetch transactions for the table
+    transactions_query_with_product =
+      from t in transactions_query,
+        join: p in assoc(t, :product),
+        select: %{product: p.title, quantity: t.quantity, date: t.inserted_at}
+
+    transactions = Repo.all(transactions_query_with_product)
 
     %{
       total_products_in_stock: total_products_in_stock,
       best_selling_product: best_selling_product,
-      total_transactions: total_transactions
+      total_transactions: total_transactions,
+      transactions: transactions
     }
   end
 end
-
-
-
-### Updated Helper Module `MyCalendar`
 
 defmodule ClothingDashboardWeb.MyCalendar do
   @months ~w(January February March April May June July August September October November December)
