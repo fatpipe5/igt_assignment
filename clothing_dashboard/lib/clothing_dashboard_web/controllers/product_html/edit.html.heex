@@ -1,0 +1,8 @@
+<.header>
+  Edit Product {@product.id}
+  <:subtitle>Use this form to manage product records in your database.</:subtitle>
+</.header>
+
+<.product_form changeset={@changeset} action={~p"/products/#{@product}"} categories={@categories}/>
+
+<.back navigate={~p"/products_live"}>Back to products</.back>
