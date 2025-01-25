@@ -7,7 +7,7 @@ defmodule ClothingDashboard.Catalog do
   alias ClothingDashboard.Repo
 
   alias ClothingDashboard.Catalog.Product
-
+  alias ClothingDashboard.Catalog.Transaction
   @doc """
   Returns the list of products.
 
@@ -165,7 +165,12 @@ defmodule ClothingDashboard.Catalog do
     Repo.all(query)
   end
 
-
+  # Function to create a transaction
+  def create_transaction(attrs \\ %{}) do
+    %Transaction{}
+    |> Transaction.changeset(attrs)
+    |> Repo.insert()
+  end
 
 
 

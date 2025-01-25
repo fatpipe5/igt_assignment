@@ -7,6 +7,8 @@
 # General application configuration
 import Config
 
+config :bandit, :clock, :erlang
+
 config :clothing_dashboard,
   ecto_repos: [ClothingDashboard.Repo],
   generators: [timestamp_type: :utc_datetime]

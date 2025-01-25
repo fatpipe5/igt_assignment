@@ -21,6 +21,8 @@ defmodule ClothingDashboardWeb.Router do
 
     get "/", PageController, :home
     live "/products_live", ProductsLive, :index
+    live "/dashboard", DashboardLive
+
     resources "/products", ProductController
   end
 
