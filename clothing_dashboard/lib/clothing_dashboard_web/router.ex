@@ -12,39 +12,38 @@ defmodule ClothingDashboardWeb.Router do
     plug :put_secure_browser_headers
   end
 
-  pipeline :api do
-    plug :accepts, ["json"]
+  pipeline :authenticated do
+    plug :fetch_session
+    plug :put_secure_browser_headers
+    plug :require_authenticated_user
   end
 
+  defp require_authenticated_user(conn, _opts) do
+    if get_session(conn, :user_id) do
+      conn
+    else
+      conn
+      |> Phoenix.Controller.redirect(to: "/login")
+      |> halt()
+    end
+  end
+
+  # Public routes
   scope "/", ClothingDashboardWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
-    live "/products_live", ProductsLive, :index
-    live "/dashboard", DashboardLive
-
-    resources "/products", ProductController
+    live "/register", RegistrationLive, :index
+    live "/login", LoginLive, :index
+    get "/set_session/:user_id", PageController, :set_session
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", ClothingDashboardWeb do
-  #   pipe_through :api
-  # end
+  # Protected routes
+  scope "/", ClothingDashboardWeb do
+    pipe_through [:browser, :authenticated]
 
-  # Enable LiveDashboard and Swoosh mailbox preview in development
-  if Application.compile_env(:clothing_dashboard, :dev_routes) do
-    # If you want to use the LiveDashboard in production, you should put
-    # it behind authentication and allow only admins to access it.
-    # If your application does not have an admins-only section yet,
-    # you can use Plug.BasicAuth to set up some basic authentication
-    # as long as you are also using SSL (which you should anyway).
-    import Phoenix.LiveDashboard.Router
-
-    scope "/dev" do
-      pipe_through :browser
-
-      live_dashboard "/dashboard", metrics: ClothingDashboardWeb.Telemetry
-      forward "/mailbox", Plug.Swoosh.MailboxPreview
-    end
+    live "/dashboard", DashboardLive
+    live "/products_live", ProductsLive, :index
+    resources "/users", UserController
+    resources "/products", ProductController
   end
 end

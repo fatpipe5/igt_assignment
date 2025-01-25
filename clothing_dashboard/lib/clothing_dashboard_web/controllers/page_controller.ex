@@ -1,9 +1,10 @@
 defmodule ClothingDashboardWeb.PageController do
   use ClothingDashboardWeb, :controller
 
-  def home(conn, _params) do
-    # The home page is often custom made,
-    # so skip the default app layout.
-    render(conn, :home, layout: false)
+  def set_session(conn, %{"user_id" => user_id}) do
+    conn
+    |> put_session(:user_id, user_id)
+    |> configure_session(renew: true) # Regenerate session ID for security
+    |> redirect(to: "/dashboard")
   end
 end

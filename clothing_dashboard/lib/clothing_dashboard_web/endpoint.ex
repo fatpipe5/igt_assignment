@@ -1,8 +1,7 @@
 defmodule ClothingDashboardWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :clothing_dashboard
 
-  # The session will be stored in the cookie and signed,
-  # this means its contents can be read but not tampered with.
+  # The session will be stored in the cookie and signed.
   # Set :encryption_salt if you would also like to encrypt it.
   @session_options [
     store: :cookie,
@@ -16,9 +15,6 @@ defmodule ClothingDashboardWeb.Endpoint do
     longpoll: [connect_info: [session: @session_options]]
 
   # Serve at "/" the static files from "priv/static" directory.
-  #
-  # You should set gzip to true if you are running phx.digest
-  # when deploying your static files in production.
   plug Plug.Static,
     at: "/",
     from: :clothing_dashboard,

@@ -3,6 +3,7 @@ defmodule ClothingDashboardWeb.DashboardLive do
   import Ecto.Query
   alias ClothingDashboard.Catalog
   alias ClothingDashboard.Repo
+  alias ClothingDashboard.Accounts
 
   @impl true
   def render(assigns) do
@@ -81,10 +82,26 @@ defmodule ClothingDashboardWeb.DashboardLive do
   end
 
   @impl true
-  def mount(_params, _session, socket) do
-    # Initial data load
-    stats = fetch_statistics()
-    {:ok, assign(socket, stats)}
+  def mount(_params, session, socket) do
+    if session["user_id"] do
+      # Fetch the user and stats if the user is authenticated
+      user = Accounts.get_user!(session["user_id"])
+      stats = fetch_statistics()
+
+      {:ok,
+       socket
+       |> assign(:current_user, user) # Assign the current user
+       |> assign(:total_products_in_stock, stats.total_products_in_stock)
+       |> assign(:best_selling_product, stats.best_selling_product)
+       |> assign(:total_transactions, stats.total_transactions)
+       |> assign(:transactions, stats.transactions)}
+    else
+      # Redirect if not authenticated
+      {:ok,
+       socket
+       |> put_flash(:error, "Please log in to access the dashboard.")
+       |> push_redirect(to: "/login")}
+    end
   end
 
   @impl true
@@ -96,7 +113,12 @@ defmodule ClothingDashboardWeb.DashboardLive do
         fetch_statistics(String.to_integer(month))
       end
 
-    {:noreply, assign(socket, stats)}
+    {:noreply,
+     socket
+     |> assign(:total_products_in_stock, stats.total_products_in_stock)
+     |> assign(:best_selling_product, stats.best_selling_product)
+     |> assign(:total_transactions, stats.total_transactions)
+     |> assign(:transactions, stats.transactions)}
   end
 
   defp fetch_statistics(month \\ nil) do

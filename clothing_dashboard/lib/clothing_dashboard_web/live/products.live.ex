@@ -2,6 +2,7 @@ defmodule ClothingDashboardWeb.ProductsLive do
   use ClothingDashboardWeb, :live_view
 
   alias ClothingDashboard.Catalog
+  alias ClothingDashboard.Accounts
 
   @impl true
   def render(assigns) do
@@ -135,19 +136,36 @@ defmodule ClothingDashboardWeb.ProductsLive do
   end
 
   @impl true
-  def mount(_params, _session, socket) do
-    categories = Catalog.list_all_categories()
+  def mount(_params, session, socket) do
+    if session["user_id"] do
+      user = Accounts.get_user!(session["user_id"])
+      categories = Catalog.list_all_categories()
 
-    socket =
+      # Load products initially
+      products = load_products(%{
+        search_query: "",
+        selected_category: "",
+        sort_by: nil
+      })
+
+      {:ok,
+      assign(socket,
+        current_user: user,
+        categories: categories,
+        search_query: "",
+        selected_category: "",
+        sort_by: nil,
+        products: products
+      )}
+    else
+      {:ok,
       socket
-      |> assign(:search_query, "")
-      |> assign(:selected_category, "")
-      |> assign(:sort_by, nil)
-      |> assign(:categories, categories)
-
-    products = load_products(socket)
-    {:ok, assign(socket, :products, products)}
+      |> put_flash(:error, "Please log in to access products.")
+      |> push_redirect(to: "/login")}
+    end
   end
+
+
 
   @impl true
   def handle_event("search", %{"filters" => %{"search_query" => query}}, socket) do
@@ -195,16 +213,19 @@ defmodule ClothingDashboardWeb.ProductsLive do
       sort_by: socket.assigns.sort_by
     }, label: "Reload Products Parameters")
 
-    products = load_products(socket)
+    products = load_products(%{
+      search_query: socket.assigns.search_query,
+      selected_category: socket.assigns.selected_category,
+      sort_by: socket.assigns.sort_by
+    })
+
     assign(socket, :products, products)
   end
 
 
-  defp load_products(socket) do
-    Catalog.search_products(%{
-      search: socket.assigns.search_query,
-      category: socket.assigns.selected_category,
-      sort_by: socket.assigns.sort_by
-    })
+
+  defp load_products(filters) do
+    Catalog.search_products(filters)
   end
+
 end

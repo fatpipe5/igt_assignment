@@ -125,41 +125,33 @@ defmodule ClothingDashboard.Catalog do
   end
 
   # A more advanced query that handles search, filtering, sorting in one shot:
-  def search_products(%{search: search, category: category, sort_by: sort_by}) do
-    query =
-      from p in Product
+  def search_products(%{search_query: search_query, selected_category: selected_category, sort_by: sort_by}) do
+    query = from p in Product, where: true
 
-    # Partial Title Search
+    # Filter by search query
     query =
-      if search && search != "" do
-        from p in query,
-        where: ilike(p.title, ^"%#{search}%")
+      if search_query != "" do
+        from p in query, where: ilike(p.title, ^"%#{search_query}%")
       else
         query
       end
 
-    # Category Filter
+    # Filter by category
     query =
-      if category && category != "" do
-        from p in query,
-        where: p.category == ^category
+      if selected_category != "" do
+        from p in query, where: p.category == ^selected_category
       else
         query
       end
 
-    # Sorting
+    # Sorting logic
     query =
       case sort_by do
-        :price_asc ->
-          from p in query, order_by: [asc: p.price]
-        :price_desc ->
-          from p in query, order_by: [desc: p.price]
-        :stock_asc ->
-          from p in query, order_by: [asc: p.stock]
-        :stock_desc ->
-          from p in query, order_by: [desc: p.stock]
-        _ ->
-          query  # no sorting
+        :price_asc -> from p in query, order_by: [asc: p.price]
+        :price_desc -> from p in query, order_by: [desc: p.price]
+        :stock_asc -> from p in query, order_by: [asc: p.stock]
+        :stock_desc -> from p in query, order_by: [desc: p.stock]
+        _ -> query
       end
 
     Repo.all(query)
