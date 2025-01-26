@@ -13,7 +13,9 @@ There are multiple seeds for different things, run them all to get the default d
 ## Logging in
 
 You can use the test user that gets created by seeds_users:
+
 email: admin@example.com
+
 password: password123
 
 ## Endpoints
@@ -26,6 +28,16 @@ The homepage at http://localhost:4000/ will help you with navigation, but these 
  - http://localhost:4000/login
  - http://localhost:4000/register
 
+## Login/Register screen
+
+Login and Registration is handled by the Pbkdf2 library. 
+
+Passwords are hashed and the password has to be at least 6 characters long.
+
+You need to be logged-in in order to access /dashboard, /products_live and /live_feed endpoints.
+
+## Live Feed
+In order to test out communication with multiple users, you need to register a new account and then log-in via Incognito window.
 
 
 
