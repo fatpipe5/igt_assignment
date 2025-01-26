@@ -23,5 +23,9 @@ The homepage at http://localhost:4000/ will help you with navigation, but these 
  - http://localhost:4000/products_live - for the LiveView of Products
  - http://localhost:4000/dashboard - for the LiveView of Dashboard
  - http://localhost:4000/live_feed - for LiveFeed via PubSub
+ - http://localhost:4000/login
+ - http://localhost:4000/register
+
+
 
 
