@@ -30,7 +30,6 @@ defmodule ClothingDashboardWeb.ProductsLive do
           </button>
         </.form>
 
-
         <div>
           <a href={~p"/products/new"} class="bg-black text-white px-4 py-2 rounded shadow">
             New Product
@@ -74,8 +73,6 @@ defmodule ClothingDashboardWeb.ProductsLive do
           </div>
         </.form>
       </div>
-
-
 
       <!-- Sorting Buttons -->
       <div class="flex space-x-4">
@@ -139,7 +136,6 @@ defmodule ClothingDashboardWeb.ProductsLive do
                 <div class="flex justify-center space-x-2">
                   <button
                     class="bg-gray-500 text-white px-2 py-1 rounded"
-                    onclick={"window.location='/products/#{product.id}/edit'"}
                   >
                     Edit
                   </button>
@@ -171,6 +167,7 @@ defmodule ClothingDashboardWeb.ProductsLive do
       products = load_products(%{
         search_query: "",
         selected_category: "",
+        selected_tags: [], # Add selected_tags as an empty list
         sort_by: nil
       })
 
@@ -181,7 +178,7 @@ defmodule ClothingDashboardWeb.ProductsLive do
         search_query: "",
         selected_category: "",
         tags: tags,
-        selected_tags: [],
+        selected_tags: [], # Ensure selected_tags is assigned
         sort_by: nil,
         products: products
       )}
@@ -195,6 +192,7 @@ defmodule ClothingDashboardWeb.ProductsLive do
 
 
 
+
   @impl true
   def handle_event("search", %{"filters" => %{"search_query" => query}}, socket) do
     socket = assign(socket, :search_query, query)
@@ -203,8 +201,10 @@ defmodule ClothingDashboardWeb.ProductsLive do
 
   @impl true
   def handle_event("filter_category", %{"filters" => %{"selected_category" => category}}, socket) do
-    # Assign the selected category and reload products
-    socket = assign(socket, :selected_category, category)
+    socket =
+      socket
+      |> assign(:selected_category, category)
+
     {:noreply, reload_products(socket)}
   end
 
@@ -236,39 +236,22 @@ defmodule ClothingDashboardWeb.ProductsLive do
 
   @impl true
   def handle_event("filter_tags", %{"tags" => selected_tags}, socket) do
-    IO.inspect(selected_tags, label: "Raw Tags Received")
+    selected_tags = Enum.uniq(selected_tags || [])
 
-    # Ensure selected_tags is a list of unique tag names
-    selected_tags = Enum.uniq(selected_tags)
-    IO.inspect(selected_tags, label: "Filtered Selected Tags")
+    socket =
+      socket
+      |> assign(:selected_tags, selected_tags)
 
-    # Query to fetch products matching all selected tags
-    products =
-      from(p in Product,
-        join: t in assoc(p, :tags),
-        where: t.name in ^selected_tags,
-        group_by: p.id,
-        having: count(t.id) == ^length(selected_tags), # Ensure all tags match
-        preload: [:tags]
-      )
-      |> Repo.all()
-
-    IO.inspect(products, label: "Filtered Products")
-
-    {:noreply, assign(socket, products: products, selected_tags: selected_tags)}
+    {:noreply, reload_products(socket)}
   end
-
-
-
 
   @impl true
   def handle_event("filter_tags", _params, socket) do
-    # Handle case where no tags are selected (return all products)
-    products = Repo.all(from(p in Product, preload: [:tags]))
+    socket =
+      socket
+      |> assign(:selected_tags, [])
 
-    IO.inspect(products, label: "All Products (No Tags Selected)")
-
-    {:noreply, assign(socket, products: products, selected_tags: [])}
+    {:noreply, reload_products(socket)}
   end
 
 
@@ -277,12 +260,14 @@ defmodule ClothingDashboardWeb.ProductsLive do
     IO.inspect(%{
       search: socket.assigns.search_query,
       category: socket.assigns.selected_category,
+      tags: socket.assigns.selected_tags,
       sort_by: socket.assigns.sort_by
     }, label: "Reload Products Parameters")
 
     products = load_products(%{
       search_query: socket.assigns.search_query,
       selected_category: socket.assigns.selected_category,
+      selected_tags: socket.assigns.selected_tags,
       sort_by: socket.assigns.sort_by
     })
 
@@ -291,8 +276,52 @@ defmodule ClothingDashboardWeb.ProductsLive do
 
 
 
-  defp load_products(filters) do
-    Catalog.search_products(filters)
+
+  defp load_products(%{search_query: search_query, selected_category: selected_category, selected_tags: selected_tags, sort_by: sort_by}) do
+    query =
+      from p in Product,
+        preload: [:tags]
+
+    # Filter by search query
+    query =
+      if search_query != "" do
+        from p in query, where: ilike(p.title, ^"%#{search_query}%")
+      else
+        query
+      end
+
+    # Filter by category
+    query =
+      if selected_category != "" do
+        from p in query, where: p.category == ^selected_category
+      else
+        query
+      end
+
+    # Filter by tags
+    query =
+      if selected_tags != [] do
+        from p in query,
+          join: t in assoc(p, :tags),
+          where: t.name in ^selected_tags,
+          group_by: p.id,
+          having: count(t.id) == ^length(selected_tags)
+      else
+        query
+      end
+
+    # Apply sorting
+    query =
+      case sort_by do
+        :price_asc -> from p in query, order_by: [asc: p.price]
+        :price_desc -> from p in query, order_by: [desc: p.price]
+        :stock_asc -> from p in query, order_by: [asc: p.stock]
+        :stock_desc -> from p in query, order_by: [desc: p.stock]
+        _ -> query
+      end
+
+    Repo.all(query)
   end
+
 
 end
