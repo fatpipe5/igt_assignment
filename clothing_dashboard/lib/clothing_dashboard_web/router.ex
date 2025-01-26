@@ -43,6 +43,7 @@ defmodule ClothingDashboardWeb.Router do
 
     live "/dashboard", DashboardLive
     live "/products_live", ProductsLive, :index
+    live "/live_feed", LiveFeedLive, :index
     resources "/users", UserController
     resources "/products", ProductController
   end
