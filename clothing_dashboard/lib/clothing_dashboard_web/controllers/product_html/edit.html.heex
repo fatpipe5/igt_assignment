@@ -3,6 +3,12 @@
   <:subtitle>Use this form to manage product records in your database.</:subtitle>
 </.header>
 
-<.product_form changeset={@changeset} action={~p"/products/#{@product}"} categories={@categories}/>
+<.product_form 
+  changeset={@changeset} 
+  action={~p"/products/#{@product}"} 
+  categories={@categories} 
+  tags={@tags} 
+  selected_tags={Enum.map(@product.tags, & &1.id)}
+/>
 
 <.back navigate={~p"/products_live"}>Back to products</.back>

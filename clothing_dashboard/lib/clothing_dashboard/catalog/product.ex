@@ -10,6 +10,10 @@ defmodule ClothingDashboard.Catalog.Product do
     field :price, :decimal
     field :stock, :integer
 
+    many_to_many :tags, ClothingDashboard.Catalog.Tag,
+      join_through: ClothingDashboard.Catalog.ProductTag,
+      on_replace: :delete
+
     timestamps(type: :utc_datetime)
   end
 
@@ -17,6 +21,7 @@ defmodule ClothingDashboard.Catalog.Product do
   def changeset(product, attrs) do
     product
     |> cast(attrs, [:photo, :title, :description, :category, :price, :stock])
+    |> cast_assoc(:tags)
     |> validate_required([:photo, :title, :description, :category, :price, :stock])
   end
 end

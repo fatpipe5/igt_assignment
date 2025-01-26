@@ -3,6 +3,10 @@ defmodule ClothingDashboardWeb.ProductsLive do
 
   alias ClothingDashboard.Catalog
   alias ClothingDashboard.Accounts
+  alias ClothingDashboard.Catalog.Product
+  import Ecto.Query
+  alias ClothingDashboard.Repo
+
 
   @impl true
   def render(assigns) do
@@ -51,6 +55,27 @@ defmodule ClothingDashboardWeb.ProductsLive do
           <button type="submit" class="hidden"></button>
         </.form>
       </div>
+
+      <!-- Tag Filter -->
+      <div>
+        <.form for={%{}} phx-change="filter_tags">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <%= for tag <- @tags do %>
+              <label class="inline-flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  name="tags[]"
+                  value={tag.name}
+                  checked={tag.name in @selected_tags}
+                />
+                <span><%= tag.name %></span>
+              </label>
+            <% end %>
+          </div>
+        </.form>
+      </div>
+
+
 
       <!-- Sorting Buttons -->
       <div class="flex space-x-4">
@@ -139,6 +164,7 @@ defmodule ClothingDashboardWeb.ProductsLive do
   def mount(_params, session, socket) do
     if session["user_id"] do
       user = Accounts.get_user!(session["user_id"])
+      tags = Catalog.list_all_tags()
       categories = Catalog.list_all_categories()
 
       # Load products initially
@@ -154,6 +180,8 @@ defmodule ClothingDashboardWeb.ProductsLive do
         categories: categories,
         search_query: "",
         selected_category: "",
+        tags: tags,
+        selected_tags: [],
         sort_by: nil,
         products: products
       )}
@@ -205,6 +233,45 @@ defmodule ClothingDashboardWeb.ProductsLive do
         {:noreply, reload_products(socket)}
     end
   end
+
+  @impl true
+  def handle_event("filter_tags", %{"tags" => selected_tags}, socket) do
+    IO.inspect(selected_tags, label: "Raw Tags Received")
+
+    # Ensure selected_tags is a list of unique tag names
+    selected_tags = Enum.uniq(selected_tags)
+    IO.inspect(selected_tags, label: "Filtered Selected Tags")
+
+    # Query to fetch products matching all selected tags
+    products =
+      from(p in Product,
+        join: t in assoc(p, :tags),
+        where: t.name in ^selected_tags,
+        group_by: p.id,
+        having: count(t.id) == ^length(selected_tags), # Ensure all tags match
+        preload: [:tags]
+      )
+      |> Repo.all()
+
+    IO.inspect(products, label: "Filtered Products")
+
+    {:noreply, assign(socket, products: products, selected_tags: selected_tags)}
+  end
+
+
+
+
+  @impl true
+  def handle_event("filter_tags", _params, socket) do
+    # Handle case where no tags are selected (return all products)
+    products = Repo.all(from(p in Product, preload: [:tags]))
+
+    IO.inspect(products, label: "All Products (No Tags Selected)")
+
+    {:noreply, assign(socket, products: products, selected_tags: [])}
+  end
+
+
 
   defp reload_products(socket) do
     IO.inspect(%{

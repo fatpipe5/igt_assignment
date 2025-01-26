@@ -7,114 +7,115 @@ defmodule ClothingDashboard.Catalog do
   alias ClothingDashboard.Repo
 
   alias ClothingDashboard.Catalog.Product
-  alias ClothingDashboard.Catalog.Transaction
-  @doc """
-  Returns the list of products.
+  alias ClothingDashboard.Catalog.Tag
 
-  ## Examples
-
-      iex> list_products()
-      [%Product{}, ...]
-
-  """
   def list_products do
     Repo.all(Product)
   end
 
-  @doc """
-  Gets a single product.
-
-  Raises `Ecto.NoResultsError` if the Product does not exist.
-
-  ## Examples
-
-      iex> get_product!(123)
-      %Product{}
-
-      iex> get_product!(456)
-      ** (Ecto.NoResultsError)
-
-  """
-  def get_product!(id), do: Repo.get!(Product, id)
-
-  def get_product(id) do
-    Repo.get(Product, id)
+  def get_product!(id) do
+    Product
+    |> Repo.get!(id)
+    |> Repo.preload(:tags)
   end
 
+  def get_product(id) do
+    Product
+    |> Repo.get(id)
+    |> Repo.preload(:tags)
+  end
 
-  @doc """
-  Creates a product.
-
-  ## Examples
-
-      iex> create_product(%{field: value})
-      {:ok, %Product{}}
-
-      iex> create_product(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
   def create_product(attrs \\ %{}) do
     %Product{}
     |> Product.changeset(attrs)
     |> Repo.insert()
   end
 
-  @doc """
-  Updates a product.
+  def create_product_with_tags(%{"tags" => tag_names} = attrs) do
+    tags =
+      from(t in ClothingDashboard.Catalog.Tag,
+        where: t.name in ^tag_names,
+        select: t
+      )
+      |> Repo.all()
 
-  ## Examples
+    %Product{}
+    |> Product.changeset(Map.drop(attrs, ["tags"]))
+    |> Ecto.Changeset.put_assoc(:tags, tags)
+    |> Repo.insert()
+  end
 
-      iex> update_product(product, %{field: new_value})
-      {:ok, %Product{}}
 
-      iex> update_product(product, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
 
-  """
-  def update_product(%Product{} = product, attrs) do
+  def update_product_with_tags(product, %{"tags" => tag_names} = attrs) do
+    # Convert string keys to atom keys
+    atomized_attrs = for {key, val} <- Map.drop(attrs, ["tags"]), into: %{} do
+      case key do
+        "price" -> {:price, Decimal.new(val)}
+        "stock" -> {:stock, String.to_integer(val)}
+        _ -> {String.to_existing_atom(key), val}
+      end
+    end
+
+    # Fetch or create tags (if any)
+    tags =
+      if Enum.any?(tag_names) do
+        tag_names
+        |> Enum.map(fn tag_name ->
+          Repo.get_by(ClothingDashboard.Catalog.Tag, name: tag_name) ||
+            Repo.insert!(%ClothingDashboard.Catalog.Tag{name: tag_name})
+        end)
+      else
+        []
+      end
+
+    # Update the product and associate the tags
     product
-    |> Product.changeset(attrs)
+    |> Repo.preload(:tags) # Ensure existing tags are preloaded
+    |> Ecto.Changeset.change(atomized_attrs)
+    |> Ecto.Changeset.put_assoc(:tags, tags)
     |> Repo.update()
   end
 
-  @doc """
-  Deletes a product.
+  # Fallback for when "tags" are not provided
+  def update_product_with_tags(product, attrs) do
+    # Convert string keys to atom keys
+    atomized_attrs =
+      for {key, val} <- attrs, into: %{} do
+        case key do
+          "price" -> {:price, Decimal.new(val)}
+          "stock" -> {:stock, String.to_integer(val)}
+          _ -> {String.to_existing_atom(key), val}
+        end
+      end
 
-  ## Examples
+    # Update the product and explicitly clear tags
+    product
+    |> Repo.preload(:tags)
+    |> Ecto.Changeset.change(atomized_attrs)
+    |> Ecto.Changeset.put_assoc(:tags, [])
+    |> Repo.update()
+  end
 
-      iex> delete_product(product)
-      {:ok, %Product{}}
 
-      iex> delete_product(product)
-      {:error, %Ecto.Changeset{}}
 
-  """
+
+
+
   def delete_product(%Product{} = product) do
     Repo.delete(product)
   end
 
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking product changes.
-
-  ## Examples
-
-      iex> change_product(product)
-      %Ecto.Changeset{data: %Product{}}
-
-  """
   def change_product(%Product{} = product, attrs \\ %{}) do
     Product.changeset(product, attrs)
   end
 
-  # Filter products by category
   def list_products_by_category(category) do
     Product
     |> where([p], p.category == ^category)
     |> Repo.all()
   end
 
-  # Return all distinct categories
   def list_all_categories do
     query =
       from p in Product,
@@ -124,9 +125,30 @@ defmodule ClothingDashboard.Catalog do
     Repo.all(query)
   end
 
-  # A more advanced query that handles search, filtering, sorting in one shot:
+  def list_all_tags do
+    Repo.all(Tag)
+  end
+
+  def filter_products_by_tags(tag_names) do
+    from(p in Product,
+      join: t in assoc(p, :tags),
+      where: t.name in ^tag_names,
+      distinct: true,
+      preload: [:tags]
+    )
+    |> Repo.all()
+  end
+
+  defp fetch_tags(%{"tags" => tag_ids}) do
+    from(t in Tag, where: t.id in ^tag_ids) |> Repo.all()
+  end
+
+  defp fetch_tags(_), do: []
+
   def search_products(%{search_query: search_query, selected_category: selected_category, sort_by: sort_by}) do
-    query = from p in Product, where: true
+    query =
+      from p in Product,
+        where: true
 
     # Filter by search query
     query =
@@ -156,14 +178,5 @@ defmodule ClothingDashboard.Catalog do
 
     Repo.all(query)
   end
-
-  # Function to create a transaction
-  def create_transaction(attrs \\ %{}) do
-    %Transaction{}
-    |> Transaction.changeset(attrs)
-    |> Repo.insert()
-  end
-
-
 
 end

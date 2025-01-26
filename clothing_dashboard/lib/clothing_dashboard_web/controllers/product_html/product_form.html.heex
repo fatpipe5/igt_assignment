@@ -6,12 +6,29 @@
   <.input field={f[:title]} type="text" label="Title" />
   <.input field={f[:description]} type="text" label="Description" />
 
-<.input
-  field={f[:category]}
-  type="select"
-  label="Category"
-  options={Enum.map(@categories, &{&1, &1})}
-/>
+  <.input
+    field={f[:category]}
+    type="select"
+    label="Category"
+    options={Enum.map(@categories, &{&1, &1})}
+  />
+
+  <fieldset>
+    <legend class="font-semibold mb-2">Tags</legend>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <%= for tag <- @tags do %>
+        <label class="inline-flex items-center space-x-2">
+          <input
+            type="checkbox"
+            name="product[tags][]"
+            value={tag.name}
+            checked={if @selected_tags && tag.id in @selected_tags, do: "checked", else: nil}
+          />
+          <span><%= tag.name %></span>
+        </label>
+      <% end %>
+    </div>
+  </fieldset>
 
   <.input field={f[:price]} type="number" label="Price" step="any" />
   <.input field={f[:stock]} type="number" label="Stock" />
