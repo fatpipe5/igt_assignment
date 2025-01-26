@@ -51,7 +51,7 @@ defmodule ClothingDashboardWeb.LoginLive do
   @impl true
   def mount(_params, session, socket) do
     if session["user_id"] do
-      {:ok, push_redirect(socket, to: "/dashboard")}
+      {:ok, push_redirect(socket, to: "/")}
     else
       {:ok, assign(socket, email: "", password: "", error: nil)}
     end

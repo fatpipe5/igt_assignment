@@ -468,6 +468,11 @@ defmodule ClothingDashboardWeb.CoreComponents do
 
   def table(assigns) do
     assigns =
+      assigns
+      |> assign_new(:col, fn -> [] end) # Ensure @col defaults to an empty list
+      |> assign_new(:row_id, fn -> nil end)
+
+    assigns =
       with %{rows: %Phoenix.LiveView.LiveStream{}} <- assigns do
         assign(assigns, row_id: assigns.row_id || fn {id, _item} -> id end)
       end
@@ -518,6 +523,7 @@ defmodule ClothingDashboardWeb.CoreComponents do
     </div>
     """
   end
+
 
   @doc """
   Renders a data list.

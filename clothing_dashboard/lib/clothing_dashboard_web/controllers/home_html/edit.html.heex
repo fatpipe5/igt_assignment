@@ -1,0 +1,8 @@
+<.header>
+  Edit Home {@home.id}
+  <:subtitle>Use this form to manage home records in your database.</:subtitle>
+</.header>
+
+<.home_form changeset={@changeset} action={~p"/home/#{@home}"} />
+
+<.back navigate={~p"/home"}>Back to home</.back>

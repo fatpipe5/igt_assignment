@@ -5,6 +5,6 @@ defmodule ClothingDashboardWeb.PageController do
     conn
     |> put_session(:user_id, user_id)
     |> configure_session(renew: true) # Regenerate session ID for security
-    |> redirect(to: "/dashboard")
+    |> redirect(to: "/")
   end
 end
